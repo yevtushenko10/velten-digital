@@ -43,6 +43,33 @@ export default function HomePage() {
     }
   }, [chatMessages]);
 
+  // ── Contact form state ──
+  const [formState, setFormState] = useState<"idle" | "sending" | "success" | "error">("idle");
+
+  const submitContact = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFormState("sending");
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: data
+      });
+      if (res.ok) {
+        setFormState("success");
+        form.reset();
+        setTimeout(() => setFormState("idle"), 5000);
+      } else {
+        setFormState("error");
+        setTimeout(() => setFormState("idle"), 4000);
+      }
+    } catch {
+      setFormState("error");
+      setTimeout(() => setFormState("idle"), 4000);
+    }
+  };
+
   const sendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const text = chatInput.trim();
@@ -558,32 +585,38 @@ export default function HomePage() {
               </div>
             </div>
 
-            <form className="panel rounded-2xl p-6 md:p-8" action="/api/contact-webhook" method="post">
-              <p className="mb-5 text-[11px] uppercase tracking-[0.2em] text-soft">n8n webhook-ready form</p>
+            <form onSubmit={submitContact} className="panel rounded-2xl p-6 md:p-8">
+              <input type="hidden" name="access_key" value="ed16546b-322d-4ab4-aeba-92c1b34a13ff" />
+              <input type="hidden" name="subject" value="New message from Velten Digital website" />
+              <input type="checkbox" name="botcheck" className="hidden" />
               <div className="space-y-3.5">
                 <input
                   type="text"
                   name="name"
+                  required
                   placeholder={t.contact.name}
                   className="w-full rounded-xl border border-[#6d5949] bg-[#241d17] px-4 py-3 text-sm text-ink outline-none transition placeholder:text-soft/75 focus:border-[#be8d65] focus:ring-2 focus:ring-[#be8d65]/20"
                 />
                 <input
                   type="email"
                   name="email"
+                  required
                   placeholder={t.contact.email}
                   className="w-full rounded-xl border border-[#6d5949] bg-[#241d17] px-4 py-3 text-sm text-ink outline-none transition placeholder:text-soft/75 focus:border-[#be8d65] focus:ring-2 focus:ring-[#be8d65]/20"
                 />
                 <textarea
                   name="message"
                   rows={5}
+                  required
                   placeholder={t.contact.message}
                   className="w-full rounded-xl border border-[#6d5949] bg-[#241d17] px-4 py-3 text-sm text-ink outline-none transition placeholder:text-soft/75 focus:border-[#be8d65] focus:ring-2 focus:ring-[#be8d65]/20"
                 />
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-accent to-accent2 px-5 py-3 text-sm font-semibold text-[#1b1410] transition hover:brightness-105"
+                  disabled={formState === "sending"}
+                  className="w-full rounded-xl bg-gradient-to-r from-accent to-accent2 px-5 py-3 text-sm font-semibold text-[#1b1410] transition hover:brightness-105 disabled:opacity-60"
                 >
-                  {t.contact.submit}
+                  {formState === "sending" ? "Sending…" : t.contact.submit}
                 </button>
               </div>
             </form>
@@ -608,6 +641,35 @@ export default function HomePage() {
             </div>
           </div>
         </footer>
+      </div>
+
+      {/* ── Toast notification ── */}
+      <div
+        className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 transition-all duration-500 ${
+          formState === "success" || formState === "error"
+            ? "translate-y-0 opacity-100"
+            : "translate-y-4 opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className={`flex items-center gap-3 rounded-2xl px-5 py-4 shadow-glow backdrop-blur-md ${
+          formState === "success"
+            ? "border border-emerald-500/30 bg-[#1a2e1e]/90"
+            : "border border-red-500/30 bg-[#2e1a1a]/90"
+        }`}>
+          <span className="text-xl">
+            {formState === "success" ? "✓" : "✕"}
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-ink">
+              {formState === "success" ? "Message sent!" : "Something went wrong"}
+            </p>
+            <p className="text-xs text-soft/80">
+              {formState === "success"
+                ? "We'll get back to you as soon as possible."
+                : "Please try again or contact us via Telegram."}
+            </p>
+          </div>
+        </div>
       </div>
     </main>
   );
